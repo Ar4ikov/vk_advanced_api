@@ -19,7 +19,7 @@
 import vk_advanced_api
 
 # Экземпляр класса VKAPI
-api = vk_advanced_api.VKPAI(
+api = vk_advanced_api.VKAPI(
     app_id='your-app-id',
     login='help@ar4ikov.ru',
     password='qwerty',

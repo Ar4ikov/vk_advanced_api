@@ -54,7 +54,7 @@
 import vk_advanced_api
 
 # Создаем экземпляр класса VKAPI
-api = vk_advanced_api.VKPAI(
+api = vk_advanced_api.VKAPI(
     access_token='Your-Access-Token',
     captcha_key='your-captcha-key',
     version=5.71,
