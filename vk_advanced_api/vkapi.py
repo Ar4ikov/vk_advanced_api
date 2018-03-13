@@ -20,7 +20,7 @@ from vk_advanced_api import API
 from vk_advanced_api.Auth import Auth
 
 
-class VKPAI():
+class VKAPI():
     def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None, warn_level=None):
         """
 
