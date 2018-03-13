@@ -118,6 +118,8 @@ api.sendMessage(
 ```python
 >>> utils.messages.send(user_id=1, message='Привет, Дуров!')
 ```
+
+(а это типо ответ API на ваш запрос)
 ```shell
 364582
 ```
