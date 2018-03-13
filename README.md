@@ -41,7 +41,7 @@ api = vk_advanced_api.VKAPI(
 )
 ```
 где:
-- app_id - ID Вашего Standalone-приложения
+- app_id - ID Вашего Standalone-приложения ([тут прочтите](http://vk.com/dev/editapps?act=create))
 - login - Логин/Email/Телефон юзера
 - password - Пароль юзера
 - captcha_key - API Ключ к вашему аккаунту на RuCaptcha
@@ -73,6 +73,8 @@ api = vk_advanced_api.VKAPI(
 ---
 ### Вызов методов
 
+(Все представленное здесь хорошо описано в директории examples)
+
 Всего в модифицированной версии есть пару методов, основную часть которых,
 конечно же, составляет само API Вконтактика.
 
@@ -91,3 +93,13 @@ api = vk_advanced_api.VKAPI(
 ```shell
 364582
 ```
+
+За подобную идею хочу отблагодарить человека [dimka665](https://github.com/dimka665) и его проект
+[vk](https://github.com/dimka665/vk)
+
+---
+### LongPolling и обработка эвентов
+
+(Все представленное здесь хорошо описано в директории examples)
+
+Более подробно о технологии LongPolling VK читайте [тут](https://vk.com/dev/using_longpoll)
