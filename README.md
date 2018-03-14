@@ -43,7 +43,7 @@ pip install lxml
 pip install vk_advanced_api
 ```
 
-ЕСли хотите установить определенную версию, используйте `==version`, где
+Если хотите установить определенную версию, используйте `==version`, где
 version - желаемая версия
 ```shell
 pip install vk_advanced_api==1.0.0
