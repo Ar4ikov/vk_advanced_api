@@ -6,7 +6,7 @@
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 import re
 import time
@@ -218,7 +218,7 @@ class VKAPI():
                 attach_type = 'attach1_type'
                 for i in range(1,11):
                     if event[-1].get(attach_key):
-                        attachments.append(event[-1].get(attach_type) + "_" + event[-1](attach_key))
+                        attachments.append(event[-1].get(attach_type) + "_" + event[-1].get(attach_key))
                         attach_key = attach_key[0:6] + str(i+1)
                         attach_type = attach_key + "_type"
                     else:
