@@ -151,7 +151,7 @@ class VKAPI():
         :return: - Обновляет self.details
         """
         while True:
-            sleep(600)
+            sleep(300)
             try:
                 self.details = self.getPollingDetails()
             except Exception as error:
@@ -218,7 +218,7 @@ class VKAPI():
                 attach_type = 'attach1_type'
                 for i in range(1,11):
                     if event[-1].get(attach_key):
-                        attachments.append(attach_type + "_" + attach_key)
+                        attachments.append(event[-1].get(attach_type) + "_" + event[-1](attach_key))
                         attach_key = attach_key[0:6] + str(i+1)
                         attach_type = attach_key + "_type"
                     else:
@@ -280,7 +280,7 @@ class VKAPI():
             self.updatingDetails
                  ]
         for task in tasks:
-            print('Создаю поток для {}'.format(task))
+            # print('Создаю поток для {}'.format(task))
             thread = Thread(target=task, args=())
             thread.start()
 
