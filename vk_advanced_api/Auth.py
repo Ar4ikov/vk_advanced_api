@@ -81,7 +81,9 @@ class Auth():
             self.session = session
             return session
         else:
-            return False
+            raise VKAuthError("Не удалось авторизироваться: неправильный логин или пароль.\n"
+                              "Тажке это может быть связано с двухфакторной аунтификацией.\n"
+                              "Попробуйте отключить её в настройках безопасности и повторить попытку снова.")
 
     def getToken(self, scopes_list=None):
         """
