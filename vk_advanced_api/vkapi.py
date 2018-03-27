@@ -267,10 +267,10 @@ class VKAPI():
 
                     if isActed == False:
                         new_events.append(
-                                dict(event='new_message', type=msg_type, is_out=isOut, args=args, is_command=isCommand, peer_id=event[3],
+                                dict(event='new_message', type=msg_type, is_out=isOut, message_id=event[1], args=args, is_command=isCommand, peer_id=event[3],
                                      from_id=from_id, body=event, is_acted=isActed, attachments=attachments))
                     else:
-                        new_events.append(dict(event='new_action', attachments=attachments, peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
+                        new_events.append(dict(event='new_action', message_id=event[1], attachments=attachments, peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
                                                    acts=dict(act=act, act_mid=act_mid, act_text=act_text,
                                                              act_from=act_from)))
 
@@ -289,7 +289,7 @@ class VKAPI():
         """
 
         Технология Polling (LongPolling) -  универсальное средство получения ответа тогда, когда он поступит
-        Значительно скращает количество запросов на сервер, благодаря тому что сервер
+        Значительно сокращает количество запросов на сервер, благодаря тому что сервер
         отошлет ответ только тогда, когда появится новый эвент. В противном случае вернет пустой
         ответ через указанное время ожидание.
 
