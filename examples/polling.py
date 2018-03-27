@@ -7,7 +7,7 @@
     Но пока доступны (и сделаны xD) только 2.
 
     - new_message - Новое сообщение в беседе или личных сообщениях
-        > type - тип сообщения:
+        > type - Тип сообщения:
             - public - если сообщение из беседы
             - private - если сообщение носит личный характер
         > is_out - Определяет, явзяется ли сообщение исходящим (True, если да)
@@ -37,7 +37,7 @@
         > is_out - Определяет, явзяется ли сообщение исходящим (True, если да)
         > acts - Сами действия, которые произошли в беседе. Вид:
         {
-            > act - id действия
+            > act - ID действия
             > act_mid - ID юзера, над которым совершили действие
             > act_from - ID юзера, который совершил действие
             > act_text - Текст, который был передан в действии (обычно новое название беседы)
@@ -58,7 +58,8 @@ api = vk_advanced_api.VKAPI(
     access_token='Your-Access-Token',
     captcha_key='your-captcha-key',
     version=5.71,
-    warn_level=1
+    warn_level=1,
+    command_prefix='/'
 )
 
 # Utils - прямое взаимодействие с API VK
@@ -116,6 +117,8 @@ def onAction(event):
 
     elif event['acts']['act'] == 'chat_kick_user':
         print('{user} кикнул из чата {mid}'.format(user=event['acts']['act_from'], mid=event['acts']['act_mid']))
+    elif event['acts']['act'] == 'chat_invite_user_by_link':
+        print('{user} присоединился в чат по ссылке'.format(user=event['acts']['act_from']))
 
 @api.poll.on('error')
 def errorHandler(event):

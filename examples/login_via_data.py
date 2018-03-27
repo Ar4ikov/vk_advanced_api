@@ -25,7 +25,8 @@ api = vk_advanced_api.VKAPI(
     password='qwerty',
     captcha_key='your-captcha-key',
     version=5.71,
-    warn_level=1
+    warn_level=1,
+    command_prefix='/'
 )
 
 # Utils - прямое взаимодействие с API VK
