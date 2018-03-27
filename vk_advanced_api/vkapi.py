@@ -6,7 +6,7 @@
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
-__version__ = '1.0.2'
+__version__ = '1.1.0'
 
 import re
 import time
@@ -21,7 +21,7 @@ from vk_advanced_api.Auth import Auth
 
 
 class VKAPI():
-    def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None, warn_level=None):
+    def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None, warn_level=None, command_prefix='/'):
         """
 
         VK Advanced API - Продвинутое OpenSource API на Python для VK
@@ -35,8 +35,10 @@ class VKAPI():
         :param warn_level: - Уровень вывода ошибок и логов:
             > 1 - Выводит информацию в консоль
             > 2 - Выводит посредством вызова исключений (raise)
+        :param command_prefix: - Префикс для объявления команд (на них будет реагиорвать API)
         """
-        self.version = version or 5.71
+        self.version = version or 5.73
+        self.command_prefix = command_prefix or '/'
 
         self.warn_level = warn_level or 1
 
@@ -103,19 +105,24 @@ class VKAPI():
         """
         sleep(0.34)
         polling_details = self.api.messages.getLongPollServer()
-        server, key, ts = polling_details['server'], polling_details['key'], polling_details['ts']
-        return {'server': server, 'key': key, 'ts': ts}
+        try:
+            server, key, ts = polling_details['server'], polling_details['key'], polling_details['ts']
+            return {'server': server, 'key': key, 'ts': ts}
+        except:
+            polling_details = self.api.messages.getLongPollServer()
+            server, key, ts = polling_details['server'], polling_details['key'], polling_details['ts']
+            return {'server': server, 'key': key, 'ts': ts}
 
     def __str__(self):
         return str({'access_token': self.access_token, 'started_at': self.start_time})
 
-    def isOut(self, flags):
+    def getFlags(self, flags):
         """
 
-        Позволяет определить, является ли сообшение исходящим
+        Разбирает ID флагов на строковые параметры
 
-        :param flags: - Флаг нужного сообщения
-        :return: Вернет True, если сообщение исходящее
+        :param flags: - ID флагов нужного сообщения
+        :return: - Вернет все ненулевые флаги
         """
         HIDDEN = flags // 65536
         HIDDEN_mod = flags % 65536
@@ -138,7 +145,25 @@ class VKAPI():
         OUTBOX = REPLIED_mod // 2
         OUTBOX_mod = REPLIED_mod % 2
         UNREAD = OUTBOX_mod // 1
-        if OUTBOX > 0:
+
+        response = []
+
+        if HIDDEN > 0: response.append('HIDDEN')
+        if MEDIA > 0: response.append('MEDIA')
+        if FIXED > 0: response.append('FIXED')
+        if DELЕTЕD > 0: response.append('DELETED')
+        if SPAM > 0: response.append('SPAM')
+        if FRIENDS > 0: response.append('FRIENDS')
+        if CHAT > 0: response.append('CHAT')
+        if IMPORTANT > 0: response.append('IMPORTANT')
+        if REPLIED > 0: response.append('REPLIED')
+        if OUTBOX > 0: response.append('OUTBOX')
+        if UNREAD > 0: response.append('UNREAD')
+
+        return response
+
+    def isOut(self, flags):
+        if self.getFlags(flags).count('OUTBOX'):
             return True
         else:
             return False
@@ -151,7 +176,7 @@ class VKAPI():
         :return: - Обновляет self.details
         """
         while True:
-            sleep(300)
+            sleep(600)
             try:
                 self.details = self.getPollingDetails()
             except Exception as error:
@@ -160,11 +185,21 @@ class VKAPI():
     def pollingRequesting(self):
         """
 
+        Первая часть ->
         Отправка запросов на Polling-сервера VK
         Чтобы получить их, используется метод messages.getLongPollingServer
 
+        Вторая часть ->
+        Обработка ответов с Polling-сервера
+        Различаются 3 типа эвентов (два с утвердительным ответом и один с ошибочным)
+        :event new_message: - Новое сообщения в беседе, личных сообщениях (от групп или от человека)
+
+        :event new_action: - Эвент, который возможен только в чатах/беседах
+
         :return: - Добавляет новый эвент в self.events
         """
+
+        # Часть 1 ->
         self.events = []
         self.details = self.getPollingDetails()
         while True:
@@ -172,99 +207,89 @@ class VKAPI():
                 self.details['server'] = re.sub(r'\\/', '/', self.details['server'])
                 response = eval(requests.get('https://{}'.format(self.details['server']),
                                          params={'act': 'a_check', 'key': self.details['key'], 'ts': self.details['ts'],
-                                                 'wait': 0, 'version': 2, 'mode': 2}).text)
+                                                 'wait': 25, 'version': 2, 'mode': 2}).text)
                 self.events = response['updates']
+                self.details['ts'] = response['ts']
             except Exception as error:
                 self.poll.emit('error', {'body': str(error)})
+            else:
+                # Часть два ->
+                messages = []
+                for event in self.events:
+                    if event[0] == 4:
+                        messages.append(event)
 
-    def pollingHandler(self):
-        """
-
-        Обработка ответов с Polling-сервера
-        Различаются 3 типа эвентов (два с утвердительным ответом и один с ошибочным)
-
-        :event new_message: - Новое сообщения в беседе, личных сообщениях (от групп или от человека)
-        :event new_action: - Эвент, который возможен только в чатах/беседах
-
-        :return: - None
-        """
-        while True:
-            messages = []
-            for event in self.events:
-                if event[0] == 4:
-                    messages.append(event)
-
-            new_events = []
-            for event in messages:
-                from_id = None
-                if event[-1].get('from'):
-                    msg_type = 'public'
-                    from_id = event[-1].get('from')
-                else:
-                    msg_type = 'private'
-
-                if event[-1].get('source_act'):
-                    isActed = True
-                else:
-                    isActed = False
-
-                act = event[-1].get('source_act')
-                act_mid = event[-1].get('source_mid')
-                act_text = event[-1].get('source_text')
-                act_from = event[-1].get('from')
-
-                attachments = []
-                attach_key = 'attach1'
-                attach_type = 'attach1_type'
-                for i in range(1,11):
-                    if event[-1].get(attach_key):
-                        attachments.append(event[-1].get(attach_type) + "_" + event[-1].get(attach_key))
-                        attach_key = attach_key[0:6] + str(i+1)
-                        attach_type = attach_key + "_type"
+                new_events = []
+                for event in messages:
+                    from_id = None
+                    if event[-1].get('from'):
+                        msg_type = 'public'
+                        from_id = event[-1].get('from')
                     else:
-                        break
+                        msg_type = 'private'
 
-                args = re.sub(r'\\/', '/', event[5])
-                args = args.split(' ')
-
-                isCommand = None
-                isOut = None
-                if len(''.join(args)) > 0:
-                    if args[0][0] == '/':
-                        isCommand = True
+                    if event[-1].get('source_act'):
+                        isActed = True
                     else:
-                        isCommand = False
+                        isActed = False
 
-                if self.isOut(event[2]):
-                    isOut = True
-                else:
-                    isOut = False
+                    act = event[-1].get('source_act')
+                    act_mid = event[-1].get('source_mid')
+                    act_text = event[-1].get('source_text')
+                    act_from = event[-1].get('from')
 
-                if isActed == False:
-                    new_events.append(
-                            dict(event='new_message', type=msg_type, is_out=isOut, args=args, is_command=isCommand, peer_id=event[3],
-                                 from_id=from_id, body=event, is_acted=isActed, attachments=attachments))
-                else:
-                    new_events.append(dict(event='new_action', attachments=attachments, peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
-                                               acts=dict(act=act, act_mid=act_mid, act_text=act_text,
-                                                         act_from=act_from)))
+                    attachments = []
+                    attach_key = 'attach1'
+                    attach_type = 'attach1_type'
+                    for i in range(1,11):
+                        if event[-1].get(attach_key):
+                            attachments.append(event[-1].get(attach_type) + "_" + event[-1].get(attach_key))
+                            attach_key = attach_key[0:6] + str(i+1)
+                            attach_type = attach_key + "_type"
+                        else:
+                            break
 
-            for new in new_events:
-                if new['event'] == 'new_action':
-                    self.poll.emit('new_action', new)
-                elif new['event'] == 'new_message':
-                    if new['is_command'] == True:
-                        self.poll.emit('new_message', new, command=new['args'][0])
+                    args = re.sub(r'\\/', '/', event[5])
+                    args = args.split(' ')
+
+                    isCommand = None
+                    isOut = None
+                    if len(''.join(args)) > 0:
+                        if args[0][0] == self.command_prefix:
+                            isCommand = True
+                        else:
+                            isCommand = False
+
+                    if self.isOut(event[2]):
+                        isOut = True
                     else:
-                        self.poll.emit('new_message', new, command=None)
+                        isOut = False
 
-            self.details = self.getPollingDetails()
+                    if isActed == False:
+                        new_events.append(
+                                dict(event='new_message', type=msg_type, is_out=isOut, args=args, is_command=isCommand, peer_id=event[3],
+                                     from_id=from_id, body=event, is_acted=isActed, attachments=attachments))
+                    else:
+                        new_events.append(dict(event='new_action', attachments=attachments, peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
+                                                   acts=dict(act=act, act_mid=act_mid, act_text=act_text,
+                                                             act_from=act_from)))
+
+                for new in new_events:
+                    if new['event'] == 'new_action':
+                        self.poll.emit('new_action', new)
+                    elif new['event'] == 'new_message':
+                        if new['is_command'] == True:
+                            self.poll.emit('new_message', new, command=new['args'][0])
+                        else:
+                            self.poll.emit('new_message', new, command=None)
+
+                # self.details = self.getPollingDetails()
 
     def polling(self):
         """
 
         Технология Polling (LongPolling) -  универсальное средство получения ответа тогда, когда он поступит
-        Значительно сокращает количество запросов на сервер, благодаря тому что сервер
+        Значительно скращает количество запросов на сервер, благодаря тому что сервер
         отошлет ответ только тогда, когда появится новый эвент. В противном случае вернет пустой
         ответ через указанное время ожидание.
 
@@ -276,7 +301,6 @@ class VKAPI():
 
         tasks = [
             self.pollingRequesting,
-            self.pollingHandler,
             self.updatingDetails
                  ]
         for task in tasks:
@@ -354,3 +378,38 @@ class VKAPI():
             except Exception as error:
                 self.poll.emit('error', {'body': str(error)})
         return result
+
+    def setGroupBanner(self, group_id, file, x1=0, y1=0, x2=1590, y2=400):
+        """
+
+        :param group_id: - ID сообщества VK
+        :param file: - Файл с обложкой для сообщества
+
+        :param x1: - Первая координата по оси X
+        :param y1: - Певрая координата по оси Y
+        :param x2: - Втора координата по оси X
+        :param y2: - Вторая координата по оси Y
+        :return:
+        """
+
+        url = self.api.photos.getOwnerCoverPhotoUploadServer(group_id=group_id, crop_x=x1, crop_y=y1, crop_x2=x2, crop_y2=y2)
+        url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
+
+        response = eval(requests.post(url['upload_url'], files={'photo': open(file, 'rb')}).text)
+        return self.api.photos.saveOwnerCoverPhoto(hash=response['hash'], photo=response['photo'])
+
+    def setChatPhoto(self, chat_id, file, x, y, width):
+        """
+
+        :param chat_id: - ID беседы
+        :param file: - Файл с фотографией беседы
+        :param x: - Первая координата по оси X
+        :param y: - Вторая координата по оси Y
+        :param width: - Ширина фотографии
+        :return:
+        """
+        url = self.api.photos.getChatUploadServer(chat_id=chat_id, crop_x=x, crop_y=y, widht=width)
+        url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
+
+        response = eval(requests.post(url['upload_url'], files={'file': open(file, 'rb')}).text)
+        return self.api.messages.setChatPhoto(file=response['response'])
