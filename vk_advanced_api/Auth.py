@@ -135,7 +135,6 @@ class Auth():
         # Он не достоин вашего внимания!
 
         request = 'https://oauth.vk.com/authorize?client_id={app_id}&scope={scopes}&redirect_uri=https://oauth.vk.com/blank.html&display=page&v=5.69&response_type=token'.format(app_id=app_id, scopes=scopes)
-        # print(request)
 
         response = self.session.post(request, proxies={'https': self.proxy})
 
