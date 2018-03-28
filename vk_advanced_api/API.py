@@ -2,7 +2,7 @@
 # | vk_advanced_api
 # | Класс: API
 # | Автор: https://vk.com/Ar4ikov
-# | Версия: 1.1.0c
+# | Версия: 1.1.6
 # | Создан 07.03.2018 - 8:19
 # ----------------------------
 
@@ -72,9 +72,10 @@ class API_Constructor():
 
             # Делаем запрос
             response = self.session.post(self.api_source + method, params=data, proxies={'https': self.proxy}, headers=self.headers)
+            response_text = re.sub('true', 'True', response.text)
 
             # Проверяем на ошибки
-            if eval(response.text).get('error'):
+            if eval(response_text).get('error'):
 
                 error = eval(response.text)['error']
                 if error['error_code'] == 14:
@@ -97,7 +98,7 @@ class API_Constructor():
                     else:
                         raise VKAPITechnicalError('Неверный уровень логирования. Возможные уровни: 1, 2.')
             else:
-                return eval(response.text)['response']
+                return eval(response_text)['response']
 
     def errorHandler(self, error):
         sender = self.getRequest(method='users.get')[0]['id']

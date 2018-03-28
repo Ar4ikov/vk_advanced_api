@@ -2,11 +2,11 @@
 # | vk_advanced_api
 # | Класс: VKAPI
 # | Автор: https://vk.com/Ar4ikov
-# | Версия: 1.1.5
+# | Версия: 1.1.6
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 
 import re
 import time
@@ -434,12 +434,24 @@ class VKAPI():
 
             response = eval(requests.post(url['upload_url'], files=data).text)
 
-            photos = self.api.photos.save(
-                server=response['server'],
-                photos_list=response['photos_list'],
-                hash=response['hash'],
-                aid=response['aid']
-            )
+            if group_id:
+                photos = self.api.photos.save(
+                    album_id=album_id,
+                    group_id=group_id,
+                    server=response['server'],
+                    photos_list=response['photos_list'],
+                    hash=response['hash'],
+                    aid=response['aid']
+                )
+            else:
+                photos = self.api.photos.save(
+                    album_id=album_id,
+                    user_id=self.bot_id,
+                    server=response['server'],
+                    photos_list=response['photos_list'],
+                    hash=response['hash'],
+                    aid=response['aid']
+                )
 
             true_photos = []
             for photo in photos:
@@ -455,7 +467,7 @@ class VKAPI():
         :param file: - Имя файла для загрузки
         :param description: - Описание фотографии
         :param group_id: - ID сообщества. Если не указан, фотографии будут загружены на стену пользователю.
-        :return:
+        :return: photo<owner_id>_<id>
         """
 
         url = self.api.photos.getWallUploadServer(group_id=group_id)
@@ -464,13 +476,14 @@ class VKAPI():
         response = eval(requests.post(url['upload_url'], files={'photo': open(file, 'rb')}).text)
 
         photo = self.api.photos.saveWallPhoto(
+            group_id=group_id,
             hash=response['hash'],
             server=response['server'],
             photo=response['photo'],
             caption=description
         )
 
-        return 'photo{}_{}'.format(photo['owner_id'], photo['id'])
+        return 'photo{}_{}'.format(photo[0]['owner_id'], photo[0]['id'])
 
 
     def setAvatar(self, file, x, y, width, owner_id=None):
@@ -510,7 +523,7 @@ class VKAPI():
         :param file: - Имя файла для загрузки
         :param artist: - Названия исполнителя трека
         :param title: - Название трека
-        :return:
+        :return: audio<owner_id>_<id>
         """
 
         url = self.api.audio.getUploadServer()
@@ -518,7 +531,7 @@ class VKAPI():
 
         response = eval(requests.post(url['upload_url'], files={'file': open(file, 'rb')}).text)
 
-        audios =  self.api.audio.save(
+        audio =  self.api.audio.save(
             server=response['server'],
             hash=response['hash'],
             audio=response['audio'],
@@ -526,9 +539,4 @@ class VKAPI():
             title=title
         )
 
-        true_audios = []
-
-        for audio in audios:
-            true_audios.append('audio{}_{}'.format(audio['owner_id'], audio['id']))
-
-        return true_audios
+        return 'audio{}_{}'.format(audio['owner_id'], audio['id'])
