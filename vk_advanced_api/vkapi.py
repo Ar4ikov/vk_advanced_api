@@ -243,7 +243,8 @@ class VKAPI():
                     attach_type = 'attach1_type'
                     for i in range(1,11):
                         if event[-1].get(attach_key):
-                            attachments.append(event[-1].get(attach_type) + "_" + event[-1].get(attach_key))
+                            attach_type_corrected = re.sub('_', '', event[-1].get(attach_type))
+                            attachments.append(attach_type_corrected + "_" + event[-1].get(attach_key))
                             attach_key = attach_key[0:6] + str(i+1)
                             attach_type = attach_key + "_type"
                         else:
