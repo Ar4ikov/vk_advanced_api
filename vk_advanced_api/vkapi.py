@@ -2,11 +2,11 @@
 # | vk_advanced_api
 # | Класс: VKAPI
 # | Автор: https://vk.com/Ar4ikov
-# | Версия: 1.1.6
+# | Версия: 1.1.7
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 
 import re
 import time
@@ -254,10 +254,12 @@ class VKAPI():
                     isCommand = None
                     isOut = None
                     if len(''.join(args)) > 0:
-                        if args[0][0] == self.command_prefix:
-                            isCommand = True
-                        else:
-                            isCommand = False
+                        if len(args) > 0:
+                            if len(args[0]) > 0:
+                                if args[0][0] == self.command_prefix:
+                                    isCommand = True
+                                else:
+                                    isCommand = False
 
                     if self.isOut(event[2]):
                         isOut = True
