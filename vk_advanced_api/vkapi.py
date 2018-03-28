@@ -6,7 +6,7 @@
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
-__version__ = '1.1.0b'
+__version__ = '1.1.0c'
 
 import re
 import time
@@ -18,7 +18,6 @@ import requests
 
 from vk_advanced_api import API
 from vk_advanced_api.Auth import Auth
-
 
 class VKAPI():
     def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None, warn_level=None, command_prefix='/'):
@@ -243,8 +242,7 @@ class VKAPI():
                     attach_type = 'attach1_type'
                     for i in range(1,11):
                         if event[-1].get(attach_key):
-                            attach_type_corrected = re.sub('_', '', event[-1].get(attach_type))
-                            attachments.append(attach_type_corrected + "_" + event[-1].get(attach_key))
+                            attachments.append(event[-1].get(attach_type) + event[-1].get(attach_key))
                             attach_key = attach_key[0:6] + str(i+1)
                             attach_type = attach_key + "_type"
                         else:
