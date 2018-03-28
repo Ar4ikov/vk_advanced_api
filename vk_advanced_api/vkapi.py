@@ -2,11 +2,11 @@
 # | vk_advanced_api
 # | Класс: VKAPI
 # | Автор: https://vk.com/Ar4ikov
-# | Версия: 1.1.0c
+# | Версия: 1.1.5
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
-__version__ = '1.1.0c'
+__version__ = '1.1.5'
 
 import re
 import time
@@ -307,12 +307,12 @@ class VKAPI():
             thread = Thread(target=task, args=())
             thread.start()
 
-    def sendAudio(self, files):
+    def sendAudioMessage(self, files):
         """
 
         Отправка аудио, как голосовые сообщения в личные сообщения
 
-        :param files: - Список, с именем файлов, которые нужно загрузить и отправить
+        :param files: - Список имен файлов, которые нужно загрузить и отправить
         :return: - Вернет список с JSON-схемами, хранящие информацию о загруженных аудиозаписей
         """
         getUploadServer = self.api.docs.getUploadServer(type="audio_message")
@@ -335,7 +335,7 @@ class VKAPI():
 
         Отправка видео в личные сообщения
 
-        :param files: - Список, с именем файлов, которые нужно загрузить и отправить
+        :param files: - Список имен файлов, которые нужно загрузить и отправить
         :return: - Вернет список с JSON-схемами, хранящие информацию о загруженных видеороликах
         """
         getUploadServer = self.api.video.save(name='SuperCraft', description='SuperCraft', is_private=False)
@@ -358,7 +358,7 @@ class VKAPI():
 
         Отправка фотографий на сервер в сообщения
 
-        :param files: - Список, с именем файлов, которые нужно загрузить и отправить
+        :param files: - Список имен файлов, которые нужно загрузить и отправить
         :return: - Вернет список с JSON-схемами, хранящие информацию о загруженных фотографиях
         """
         getUploadServer = self.api.photos.getMessagesUploadServer()
@@ -384,10 +384,10 @@ class VKAPI():
         :param group_id: - ID сообщества VK
         :param file: - Файл с обложкой для сообщества
 
-        :param x1: - Первая координата по оси X
-        :param y1: - Певрая координата по оси Y
-        :param x2: - Втора координата по оси X
-        :param y2: - Вторая координата по оси Y
+        :param x1: - Первая координата по оси X  |
+        :param y1: - Певрая координата по оси Y _| координаты верхнего левого угла
+        :param x2: - Втора координата по оси X   |
+        :param y2: - Вторая координата по оси Y _| координаты нижнего правого угла
         :return:
         """
 
@@ -402,8 +402,8 @@ class VKAPI():
 
         :param chat_id: - ID беседы
         :param file: - Файл с фотографией беседы
-        :param x: - Первая координата по оси X
-        :param y: - Вторая координата по оси Y
+        :param x: - Первая координата по оси X  |
+        :param y: - Вторая координата по оси Y _| координаты верхнего левого угла
         :param width: - Ширина фотографии
         :return:
         """
@@ -412,3 +412,123 @@ class VKAPI():
 
         response = eval(requests.post(url['upload_url'], files={'file': open(file, 'rb')}).text)
         return self.api.messages.setChatPhoto(file=response['response'])
+
+    def uploadPhotoToAlbum(self, album_id, files=[], group_id=None):
+        """
+
+        Загрузка фотографий в альбом
+
+        :param album_id: - ID альбома
+        :param files: - Спискок из имен файлов для загрузки (максимум - 5)
+        :param group_id: - ID сообщества. Если не указан, фотографии будут загружены в альбом на стену пользователю
+        :return:
+        """
+
+        data = {}
+        for i in range(len(files)):
+            data['file{}'.format(i+1)] = open(files[i], 'rb')
+
+        if len(files) > 0:
+            url = self.api.photos.getUploadServer(group_id=group_id, album_id=album_id)
+            url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
+
+            response = eval(requests.post(url['upload_url'], files=data).text)
+
+            photos = self.api.photos.save(
+                server=response['server'],
+                photos_list=response['photos_list'],
+                hash=response['hash'],
+                aid=response['aid']
+            )
+
+            true_photos = []
+            for photo in photos:
+                true_photos.append('photo{}_{}'.format(photo['owner_id'], photo['id']))
+
+            return true_photos
+
+    def uploadPhotoToWall(self, file, description='', group_id=None):
+        """
+
+        Загрузка фотографий на стену
+
+        :param file: - Имя файла для загрузки
+        :param description: - Описание фотографии
+        :param group_id: - ID сообщества. Если не указан, фотографии будут загружены на стену пользователю.
+        :return:
+        """
+
+        url = self.api.photos.getWallUploadServer(group_id=group_id)
+        url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
+
+        response = eval(requests.post(url['upload_url'], files={'photo': open(file, 'rb')}).text)
+
+        photo = self.api.photos.saveWallPhoto(
+            hash=response['hash'],
+            server=response['server'],
+            photo=response['photo'],
+            caption=description
+        )
+
+        return 'photo{}_{}'.format(photo['owner_id'], photo['id'])
+
+
+    def setAvatar(self, file, x, y, width, owner_id=None):
+        """
+
+        Загрузка главной фотографии пользователя или сообщества
+
+        :param file: - Имя файла для загрузки
+        :param x: - Первая координата по оси X  |
+        :param y: - Первая координата по оси Y _| координаты верхнего левого угла
+        :param width: - Ширина желаемой миниатюры
+        :param owner_id: - ID владельца. По умолчанию стоит ID текущего пользователя.
+
+        Для пользователей используйте схему:     <owner_id>
+        Для групп используйте схему:            -<owner_id>
+        :return:
+        """
+
+        url = self.api.photos.getOwnerPhotoUploadServer(owner_id=owner_id)
+        url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
+
+        response = eval(requests.post(url['upload_url'], files={
+            'photo': open(file, 'rb'),
+            '_square_crop ': '{},{},{}'.format(x, y, width)}).text)
+
+        return self.api.photos.saveOwnerPhoto(
+            server=response['server'],
+            hash=response['hash'],
+            photo=response['photo']
+        )
+
+    def uploadAudio(self, file, artist='VK Advanced API', title='Sound uploaded via vk_advanced_api'):
+        """
+
+        Загрузка аудиозаписей
+
+        :param file: - Имя файла для загрузки
+        :param artist: - Названия исполнителя трека
+        :param title: - Название трека
+        :return:
+        """
+
+        url = self.api.audio.getUploadServer()
+        url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
+
+        response = eval(requests.post(url['upload_url'], files={'file': open(file, 'rb')}).text)
+
+        audios =  self.api.audio.save(
+            server=response['server'],
+            hash=response['hash'],
+            audio=response['audio'],
+            artist=artist,
+            title=title
+        )
+
+        true_audios = []
+
+        for audio in audios:
+            true_audios.append('audio{}_{}'.format(audio['owner_id'], audio['id']))
+
+        return true_audios

@@ -2,7 +2,7 @@
 # | vk_advanced_api
 # | Класс: Auth
 # | Автор: https://vk.com/Ar4ikov
-# | Версия: 1.1.0c
+# | Версия: 1.1.5
 # | Создан 12.03.2018 - 18:56
 # ---------------------------
 
@@ -101,6 +101,7 @@ class Auth():
 
         # Полный легальный список возможных методов
         scopes_list = scopes_list or [
+            'audio',
             'notify',
             'friends',
             'photos',
