@@ -88,7 +88,7 @@ class API_Constructor():
                         captcha_sid = captcha_body['captcha_sid']
                         captcha_key = captcha_body['captcha_key']
                         print(captcha_key)
-                elif error['error_code'] == 6 or error['error_code'] == 900 or error['error_code'] == 902:
+                elif error['error_code'] in [6, 900, 901, 902]:
                     self.errorHandler(error=error)
                 else:
                     if self.warn_level == 1:
@@ -109,6 +109,12 @@ class API_Constructor():
                 if item['key'] == 'user_id':
                     user_id = item['value']
                     print('Пользователь id{user_id} добавил аккаунт id{sender} в черный список'.format(user_id=user_id, sender=sender))
+                    break
+        elif error['error_code'] == 901:
+            for item in error['request_params']:
+                if item['key'] == 'user_id':
+                    user_id = item['value']
+                    print('Пользователь id{user_id} запретил отправку сообщений от имени сообщества'.format(user_id=user_id, sender=sender))
                     break
         elif error['error_code'] == 902:
             for item in error['request_params']:

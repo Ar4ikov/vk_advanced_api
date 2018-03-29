@@ -43,6 +43,15 @@
             > act_text - Текст, который был передан в действии (обычно новое название беседы)
         }
 
+    - new_notification - Эвент, который был создан на основе метода notifications.get(), но в виде эвент-системы
+        -----------------------------
+        :user_id     | ID пользователя, который совершил действие
+        :type        | Тип действия, подробнее на https://vk.com/dev/notifications.get
+        :date        | Дата события по UNIX
+        :body        | Тело события (Для разных типов событий содержатся разные поля)
+        :parent_id   | ID материала, к которому появился ответ
+        :parent      | Информация о материале, к которому появился ответ
+
     - error - Технический эвент, позволяет обработать ошибки класса VKAPI
     Ошибки класса API (или utils) обрабатываются внутри класса
 
@@ -55,8 +64,8 @@ import vk_advanced_api
 
 # Создаем экземпляр класса VKAPI
 api = vk_advanced_api.VKAPI(
-    access_token='Your-Access-Token',
     captcha_key='your-captcha-key',
+    access_token='Your-Access-Token',
     version=5.71,
     warn_level=1,
     command_prefix='/'
@@ -117,8 +126,13 @@ def onAction(event):
 
     elif event['acts']['act'] == 'chat_kick_user':
         print('{user} кикнул из чата {mid}'.format(user=event['acts']['act_from'], mid=event['acts']['act_mid']))
+
     elif event['acts']['act'] == 'chat_invite_user_by_link':
         print('{user} присоединился в чат по ссылке'.format(user=event['acts']['act_from']))
+
+@api.poll.on('new_notification')
+def handleNotification(event):
+    print('Пользователь {user} совершил `{type}` в {time} по UNIX'.format(user=event['user_id'], type=event['type'], time=event['date']))
 
 @api.poll.on('error')
 def errorHandler(event):

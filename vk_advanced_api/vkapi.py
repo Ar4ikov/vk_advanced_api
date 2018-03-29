@@ -2,11 +2,11 @@
 # | vk_advanced_api
 # | Класс: VKAPI
 # | Автор: https://vk.com/Ar4ikov
-# | Версия: 1.1.7
+# | Версия: 1.2.3
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
-__version__ = '1.1.7'
+__version__ = '1.2.3'
 
 import re
 import time
@@ -60,7 +60,18 @@ class VKAPI():
             proxy=None
             )
 
-        self.bot_id = self.api.users.get()[0]['id']
+        # Запрос на проверку типа токена:
+        # - User Access Token
+        # - Group Access Token
+
+        self.token_type = None
+
+        self.bot_fields = self.api.users.get()
+        if len(self.bot_fields) > 0:
+            self.token_type = 'user'
+            self.bot_id = self.bot_fields[0]['id']
+        else:
+            self.token_type = 'group'
         sleep(0.34)
 
         self.start_time = str(int(time.time()))[0:10]
@@ -103,14 +114,21 @@ class VKAPI():
         :return: - Вернет JSON-схему с содежимым server, key, ts
         """
         sleep(0.34)
-        polling_details = self.api.messages.getLongPollServer()
-        try:
-            server, key, ts = polling_details['server'], polling_details['key'], polling_details['ts']
-            return {'server': server, 'key': key, 'ts': ts}
-        except:
+        if self.token_type == 'user':
             polling_details = self.api.messages.getLongPollServer()
-            server, key, ts = polling_details['server'], polling_details['key'], polling_details['ts']
-            return {'server': server, 'key': key, 'ts': ts}
+        else:
+            polling_details = self.api.groups.getLongPollServer()
+
+        # Какова приичина такого выбора через цикл?
+        # Ошибки были при самом запросе, которые возникали вот просто из ни откуда.
+        # Пришлось сделать такую конструкцию. В любом случае, больше двух ошибок быть не может, ведь так?(
+        while True:
+            try:
+                server, key, ts = polling_details['server'], polling_details['key'], polling_details['ts']
+                return {'server': server, 'key': key, 'ts': ts}
+            except:
+                sleep(0.34)
+                polling_details = self.api.messages.getLongPollServer()
 
     def __str__(self):
         return str({'access_token': self.access_token, 'started_at': self.start_time})
@@ -181,7 +199,7 @@ class VKAPI():
             except Exception as error:
                 self.poll.emit('error', {'body': str(error)})
 
-    def pollingRequesting(self):
+    def PollingRequesting(self):
         """
 
         Первая часть ->
@@ -205,8 +223,14 @@ class VKAPI():
             try:
                 self.details['server'] = re.sub(r'\\/', '/', self.details['server'])
                 response = eval(requests.get('https://{}'.format(self.details['server']),
-                                         params={'act': 'a_check', 'key': self.details['key'], 'ts': self.details['ts'],
-                                                 'wait': 25, 'version': 2, 'mode': 2}).text)
+                                         params={
+                                             'act': 'a_check',
+                                             'key': self.details['key'],
+                                             'ts': self.details['ts'],
+                                             'wait': 1,
+                                             'version': 2,
+                                             'mode': 2
+                                         }).text)
                 self.events = response['updates']
                 self.details['ts'] = response['ts']
             except Exception as error:
@@ -268,10 +292,10 @@ class VKAPI():
 
                     if isActed == False:
                         new_events.append(
-                                dict(event='new_message', type=msg_type, is_out=isOut, message_id=event[1], args=args, is_command=isCommand, peer_id=event[3],
+                                dict(event='new_message', type=msg_type, date=event[4], is_out=isOut, message_id=event[1], args=args, is_command=isCommand, peer_id=event[3],
                                      from_id=from_id, body=event, is_acted=isActed, attachments=attachments))
                     else:
-                        new_events.append(dict(event='new_action', message_id=event[1], attachments=attachments, peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
+                        new_events.append(dict(event='new_action', message_id=event[1], date=event[4], attachments=attachments, peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
                                                    acts=dict(act=act, act_mid=act_mid, act_text=act_text,
                                                              act_from=act_from)))
 
@@ -301,13 +325,48 @@ class VKAPI():
         """
 
         tasks = [
-            self.pollingRequesting,
-            self.updatingDetails
-                 ]
+            {'name': 'polling', 'object': self.PollingRequesting},
+            {'name': 'details', 'object': self.updatingDetails},
+            {'name': 'notifications', 'object': self.NotificationPolling}
+                ]
+
         for task in tasks:
-            # print('Создаю поток для {}'.format(task))
-            thread = Thread(target=task, args=())
+            thread = Thread(name=task['name'], target=task['object'], args=())
             thread.start()
+
+    def NotificationPolling(self):
+        """
+
+        :return:
+        """
+
+        if self.token_type == 'group':
+            print('Для токена сообществ не доступен тип эвентов `new_notification`.')
+            return False
+
+        self.notify_events = []
+        start_time = self.api.notifications.get(count=0)['last_viewed']
+
+        while self.token_type == 'user':
+            sleep(0.34)
+            notify_body = self.api.notifications.get(count=100, start_time=start_time)
+            if notify_body['count'] > 0:
+                self.notify_events = notify_body['items']
+                start_time = self.notify_events[0]['date'] + 1
+
+                new_events = []
+                for notify in self.notify_events:
+                    user_id = notify['feedback']['from_id']
+                    type = notify['type']
+                    date = notify['date']
+                    body = notify['feedback']
+                    parent = notify['parent']
+                    parent_id = notify['parent']['id']
+
+                    new_events.append(dict(user_id=user_id, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
+
+                for event in new_events:
+                    self.poll.emit('new_notification', event)
 
     def sendAudioMessage(self, files):
         """
@@ -528,6 +587,8 @@ class VKAPI():
         :return: audio<owner_id>_<id>
         """
 
+        if self.token_type == 'group':
+            return 'Данный метод не доступен для токена сообществ.'
         url = self.api.audio.getUploadServer()
         url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
 
