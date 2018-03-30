@@ -2,7 +2,6 @@
 # | vk_advanced_api
 # | Класс: VKAPI
 # | Автор: https://vk.com/Ar4ikov
-# | Версия: 1.2.3
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 
@@ -227,7 +226,7 @@ class VKAPI():
                                              'act': 'a_check',
                                              'key': self.details['key'],
                                              'ts': self.details['ts'],
-                                             'wait': 1,
+                                             'wait': 25,
                                              'version': 2,
                                              'mode': 2
                                          }).text)
@@ -356,14 +355,26 @@ class VKAPI():
 
                 new_events = []
                 for notify in self.notify_events:
-                    user_id = notify['feedback']['from_id']
+
+                    user_id = None
+                    user_ids = None
+
+                    if notify['feedback'].get('items'):
+                        user_ids = []
+                        for user in notify['feedback']['items'][0]:
+                            user_ids.append(user['from_id'])
+                    else:
+                        user_id = notify['feedback']['from_id']
                     type = notify['type']
                     date = notify['date']
                     body = notify['feedback']
                     parent = notify['parent']
                     parent_id = notify['parent']['id']
 
-                    new_events.append(dict(user_id=user_id, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
+                    if user_id:
+                        new_events.append(dict(user_id=user_id, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
+                    else:
+                        new_events.append(dict(user_ids=user_ids, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
 
                 for event in new_events:
                     self.poll.emit('new_notification', event)
