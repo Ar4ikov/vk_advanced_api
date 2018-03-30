@@ -37,7 +37,7 @@ files_1 = ['Blue_Chair.mp4', 'Do_not_go_on_bear_fucking_bitch.mp4']
 uploaded_files_1 = api.sendVideo(files=files_1)
 
 files_2 = ['voice.mp3']
-uploaded_files_2 = api.sendAudio(files=files_2)
+uploaded_files_2 = api.sendAudioMessage(files=files_2)
 
 # А затем это можно отправить сообщение с ними, предварительно обоаботав данные
 
