@@ -9,6 +9,7 @@ import requests
 from captcha_solver import CaptchaSolver
 import re
 import sys
+from time import sleep
 
 class API_Constructor():
     def __init__(self, warn_level=None, api_source=None, access_token=None, session=requests.session(), proxy=None, rucaptcha_key=None, version=None):
@@ -102,6 +103,7 @@ class API_Constructor():
     def errorHandler(self, error):
         sender = self.getRequest(method='users.get')[0]['id']
         if error['error_code'] == 6:
+            sleep(1)
             print("Запросы отправляются слишком быстро")
         elif error['error_code'] == 900:
             for item in error['request_params']:
