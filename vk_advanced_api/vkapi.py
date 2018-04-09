@@ -309,7 +309,7 @@ class VKAPI():
 
                 # self.details = self.getPollingDetails()
 
-    def polling(self):
+    def polling(self, enable_notifications=False):
         """
 
         Технология Polling (LongPolling) -  универсальное средство получения ответа тогда, когда он поступит
@@ -325,9 +325,10 @@ class VKAPI():
 
         tasks = [
             {'name': 'polling', 'object': self.PollingRequesting},
-            {'name': 'details', 'object': self.updatingDetails},
-            {'name': 'notifications', 'object': self.NotificationPolling}
-                ]
+            {'name': 'details', 'object': self.updatingDetails}]
+
+        if enable_notifications:
+            tasks.append({'name': 'notifications', 'object': self.NotificationPolling})
 
         for task in tasks:
             thread = Thread(name=task['name'], target=task['object'], args=())

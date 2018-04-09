@@ -73,7 +73,11 @@ api = vk_advanced_api.VKAPI(
 utils = api.utils
 
 # Включаем Polling
-api.polling()
+#
+# `enable_notifications` - включает Notifications Events
+# По умолчанию стоит `False`, является необязательным параметром и добавлено временно
+#
+api.polling(enable_notifications=False)
 
 # Прослушиваем эвент new_messages
 @api.poll.on('new_message')
