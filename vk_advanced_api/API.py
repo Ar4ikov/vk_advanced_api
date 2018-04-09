@@ -11,6 +11,9 @@ import re
 import sys
 from time import sleep
 
+from vk_advanced_api.Request import Request
+from vk_advanced_api import Pool
+
 class API_Constructor():
     def __init__(self, warn_level=None, api_source=None, access_token=None, session=requests.session(), proxy=None, rucaptcha_key=None, version=None):
         """
@@ -46,6 +49,10 @@ class API_Constructor():
         self.api_source = api_source or 'https://api.vk.com/method/'
         self.warn_level = warn_level or 1
 
+    @staticmethod
+    def getRequestingBody():
+        return API_Constructor.getRequest
+
     def getRequest(self, method, **data):
         """
 
@@ -73,6 +80,8 @@ class API_Constructor():
             # Делаем запрос
             response = self.session.post(self.api_source + method, params=data, proxies={'https': self.proxy}, headers=self.headers)
             response_text = re.sub('true', 'True', response.text)
+            response_text = re.sub('false', 'False', response_text)
+            response_text = re.sub('null', 'None', response_text)
 
             # Проверяем на ошибки
             if eval(response_text).get('error'):
@@ -193,7 +202,18 @@ class API_Object():
             api_source=self.api_source,
             warn_level=self.warn_level or 1
         )
-        return API.getRequest(method=self.method, **kwargs)
+        print(kwargs)
+        Pool.Pool.startPool()
+        request = Request(method=self.method, cls=API, id=Pool.Pool.getActualId(), **kwargs)
+        print(request.method, request.params)
+        Pool.Pool.pool.append(request)
+        while True:
+            for response in Pool.Pool.processed:
+                if response.id == request.id:
+                    print(response.body)
+                    return response.body
+
+        # return API.getRequest(method=self.method, **kwargs)
 
 class API():
     def __init__(self, warn_level=None, api_source=None, access_token=None, proxy=None, rucaptcha_key=None, version=None):

@@ -1,11 +1,34 @@
 from vk_advanced_api import API
+from vk_advanced_api.Response import Response
+from threading import Thread
+import time
 
-class Pool(API):
+class Pool():
     pool = []
+    processed = []
+    started = False
 
     @staticmethod
-    def getActualId(self):
-        pass
+    def PoolBody():
+        while True:
+            i = 0
+            for request in Pool.pool:
+                i += 1
+                MakingRequest = API.API_Constructor.getRequestingBody()
+                time.sleep(0.34)
+                response = MakingRequest(request.cls, method=request.method, **request.params)
+                Pool.processed.append(Response(body=response, id=request.id))
+                if len(Pool.pool) > 0:
+                    Pool.pool.remove(request)
+    @staticmethod
+    def startPool():
+        if not Pool.started:
+            Pool.started = True
+            Thread(target=Pool.PoolBody, name="RequestPool", args=()).start()
+
+    @staticmethod
+    def getActualId():
+        return len(Pool.pool)
 
     @staticmethod
     def addTask(Pool, request):

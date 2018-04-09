@@ -345,7 +345,7 @@ class VKAPI():
             return False
 
         self.notify_events = []
-        start_time = self.api.notifications.get(count=0)['last_viewed']
+        start_time = self.api.notifications.get(count=0)[0].get('last_viewed')
 
         while self.token_type == 'user':
             sleep(0.34)
