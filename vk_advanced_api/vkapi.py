@@ -363,7 +363,7 @@ class VKAPI():
                     if notify['feedback'].get('items'):
                         user_ids = []
                         for user in notify['feedback']['items'][0]:
-                            user_ids.append(user['from_id'])
+                            user_ids.append(user[0]['from_id'])
                     else:
                         user_id = notify['feedback']['from_id']
                     type = notify['type']

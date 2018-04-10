@@ -1,4 +1,3 @@
-from vk_advanced_api import API
 from vk_advanced_api.Response import Response
 from threading import Thread
 import time
@@ -16,11 +15,14 @@ class Pool():
             for request in Pool.pool:
                 i += 1
                 Pool.id += 1
-                print(len(Pool.pool))
-                MakingRequest = API.API_Constructor.getRequestingBody()
+
+                MakingRequest = request.getCls().getRequestingBody()
+
                 time.sleep(0.34)
-                response = MakingRequest(request.cls, method=request.method, **request.params)
-                Pool.processed.append(Response(body=response, id=request.id))
+
+                response = MakingRequest(request.getCls(), method=request.getMethod(), **request.getParams())
+                Pool.processed.append(Response(body=response, id=request.getId()))
+
                 if len(Pool.pool) > 0:
                     Pool.pool.remove(request)
     @staticmethod
@@ -36,3 +38,11 @@ class Pool():
     @staticmethod
     def addTask(Pool, request):
         Pool.pool.append(request)
+
+    @staticmethod
+    def addRequest(request):
+        Pool.pool.append(request)
+
+    @staticmethod
+    def getProcessed():
+        return Pool.processed

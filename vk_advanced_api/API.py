@@ -12,8 +12,8 @@ import sys
 from time import sleep
 
 from vk_advanced_api.Request import Request
-from vk_advanced_api import Pool
-from uuid import uuid4 as uuid
+from vk_advanced_api import Pool as RequestPool
+from uuid import uuid4 as UUID
 
 class API_Constructor():
     def __init__(self, warn_level=None, api_source=None, access_token=None, session=requests.session(), proxy=None, rucaptcha_key=None, version=None):
@@ -203,17 +203,18 @@ class API_Object():
             api_source=self.api_source,
             warn_level=self.warn_level or 1
         )
-        #print(kwargs)
-        Pool.Pool.startPool()
-        request = Request(method=self.method, cls=API, id=str(uuid()), **kwargs)
-        #print(request.method, request.params)
-        Pool.Pool.pool.append(request)
+        RequestPool.Pool.startPool()
+        request = Request(method=self.method, cls=API, id=UUID(), **kwargs)
+
+        RequestPool.Pool.addRequest(request)
+
         while True:
-            for response in Pool.Pool.processed:
-                if response.id == request.id:
+            for response in RequestPool.Pool.getProcessed():
+                if response.getId() == request.getId():
+
                     #print(response.body)
-                    Pool.Pool.processed.remove(response)
-                    print(response.body, response.id)
+                    RequestPool.Pool.processed.remove(response)
+                    print(response.getBody(), response.getId())
                     return response.body
 
         # return API.getRequest(method=self.method, **kwargs)
