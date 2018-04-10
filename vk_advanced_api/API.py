@@ -212,13 +212,8 @@ class API_Object():
             for response in RequestPool.Pool.getProcessed():
                 if response.getId() == request.getId():
 
-                    #print(response.body)
                     RequestPool.Pool.processed.remove(response)
-                    print(response.getBody(), response.getId())
                     return response.body
-
-        # return API.getRequest(method=self.method, **kwargs)
-
 class API():
     def __init__(self, warn_level=None, api_source=None, access_token=None, proxy=None, rucaptcha_key=None, version=None):
         self.access_token = access_token or None

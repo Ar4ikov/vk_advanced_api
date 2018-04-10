@@ -134,7 +134,10 @@ def onAction(event):
 
 @api.poll.on('new_notification')
 def handleNotification(event):
-    print('Пользователь {user} совершил `{type}` в {time} по UNIX'.format(user=event['user_id'], type=event['type'], time=event['date']))
+    if event.get('user_id'):
+        print('Пользователь {user} совершил `{type}` в {time} по UNIX'.format(user=event['user_id'], type=event['type'], time=event['date']))
+    else:
+        print('В {time} по UNIX пользователи {users} совершили `{type}`'.format(time=event['date'], users=event['user_ids'], type=event['type']))
 
 @api.poll.on('error')
 def errorHandler(event):

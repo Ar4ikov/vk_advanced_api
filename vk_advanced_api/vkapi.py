@@ -339,13 +339,12 @@ class VKAPI():
 
         :return:
         """
-
         if self.token_type == 'group':
             print('Для токена сообществ не доступен тип эвентов `new_notification`.')
             return False
 
         self.notify_events = []
-        start_time = self.api.notifications.get(count=0).get('last_viewed')
+        start_time = self.api.notifications.get(count=0)['last_viewed']
 
         while self.token_type == 'user':
             sleep(0.34)
@@ -356,14 +355,15 @@ class VKAPI():
 
                 new_events = []
                 for notify in self.notify_events:
+                    print(notify)
 
                     user_id = None
                     user_ids = None
 
                     if notify['feedback'].get('items'):
                         user_ids = []
-                        for user in notify['feedback']['items'][0]:
-                            user_ids.append(user[0]['from_id'])
+                        for user in notify['feedback']['items']:
+                            user_ids.append(user.get("from_id"))
                     else:
                         user_id = notify['feedback']['from_id']
                     type = notify['type']
@@ -373,9 +373,11 @@ class VKAPI():
                     parent_id = notify['parent']['id']
 
                     if user_id:
-                        new_events.append(dict(user_id=user_id, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
+                        new_events.append(
+                            dict(user_id=user_id, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
                     else:
-                        new_events.append(dict(user_ids=user_ids, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
+                        new_events.append(dict(user_ids=user_ids, type=type, date=date, body=body, parent=parent,
+                                               parent_id=parent_id))
 
                 for event in new_events:
                     self.poll.emit('new_notification', event)
