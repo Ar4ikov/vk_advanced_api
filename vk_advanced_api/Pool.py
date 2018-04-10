@@ -7,6 +7,7 @@ class Pool():
     pool = []
     processed = []
     started = False
+    id = 1
 
     @staticmethod
     def PoolBody():
@@ -14,6 +15,8 @@ class Pool():
             i = 0
             for request in Pool.pool:
                 i += 1
+                Pool.id += 1
+                print(len(Pool.pool))
                 MakingRequest = API.API_Constructor.getRequestingBody()
                 time.sleep(0.34)
                 response = MakingRequest(request.cls, method=request.method, **request.params)
@@ -28,7 +31,7 @@ class Pool():
 
     @staticmethod
     def getActualId():
-        return len(Pool.pool)
+        return Pool.id
 
     @staticmethod
     def addTask(Pool, request):
