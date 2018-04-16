@@ -4,8 +4,10 @@
 # | Автор: https://vk.com/Ar4ikov
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
+import os
 
-__version__ = '1.2.4'
+with open(os.path.join(os.path.dirname(__file__), 'version')) as f:
+    __version__ = f.readline().strip()
 
 import re
 import time
@@ -17,6 +19,7 @@ import requests
 
 from vk_advanced_api import API
 from vk_advanced_api.Auth import Auth
+
 
 class VKAPI():
     def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None, warn_level=None, command_prefix='/'):
