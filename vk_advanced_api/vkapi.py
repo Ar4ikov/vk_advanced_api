@@ -312,7 +312,7 @@ class VKAPI():
 
                 # self.details = self.getPollingDetails()
 
-    def polling(self):
+    def polling(self, enable_notifications=False):
         """
 
         Технология Polling (LongPolling) -  универсальное средство получения ответа тогда, когда он поступит
@@ -328,9 +328,10 @@ class VKAPI():
 
         tasks = [
             {'name': 'polling', 'object': self.PollingRequesting},
-            {'name': 'details', 'object': self.updatingDetails},
-            {'name': 'notifications', 'object': self.NotificationPolling}
-                ]
+            {'name': 'details', 'object': self.updatingDetails}]
+
+        if enable_notifications:
+            tasks.append({'name': 'notifications', 'object': self.NotificationPolling})
 
         for task in tasks:
             thread = Thread(name=task['name'], target=task['object'], args=())
@@ -341,7 +342,6 @@ class VKAPI():
 
         :return:
         """
-
         if self.token_type == 'group':
             print('Для токена сообществ не доступен тип эвентов `new_notification`.')
             return False
@@ -358,14 +358,15 @@ class VKAPI():
 
                 new_events = []
                 for notify in self.notify_events:
+                    print(notify)
 
                     user_id = None
                     user_ids = None
 
                     if notify['feedback'].get('items'):
                         user_ids = []
-                        for user in notify['feedback']['items'][0]:
-                            user_ids.append(user['from_id'])
+                        for user in notify['feedback']['items']:
+                            user_ids.append(user.get("from_id"))
                     else:
                         user_id = notify['feedback']['from_id']
                     type = notify['type']
@@ -375,9 +376,11 @@ class VKAPI():
                     parent_id = notify['parent']['id']
 
                     if user_id:
-                        new_events.append(dict(user_id=user_id, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
+                        new_events.append(
+                            dict(user_id=user_id, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
                     else:
-                        new_events.append(dict(user_ids=user_ids, type=type, date=date, body=body, parent=parent, parent_id=parent_id))
+                        new_events.append(dict(user_ids=user_ids, type=type, date=date, body=body, parent=parent,
+                                               parent_id=parent_id))
 
                 for event in new_events:
                     self.poll.emit('new_notification', event)
