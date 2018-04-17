@@ -9,6 +9,11 @@ import requests
 from captcha_solver import CaptchaSolver
 import re
 import sys
+from time import sleep
+
+from vk_advanced_api.Request import Request
+from vk_advanced_api import Pool as RequestPool
+from uuid import uuid4 as UUID
 
 class API_Constructor():
     def __init__(self, warn_level=None, api_source=None, access_token=None, session=requests.session(), proxy=None, rucaptcha_key=None, version=None):
@@ -45,6 +50,10 @@ class API_Constructor():
         self.api_source = api_source or 'https://api.vk.com/method/'
         self.warn_level = warn_level or 1
 
+    @staticmethod
+    def getRequestingBody():
+        return API_Constructor.getRequest
+
     def getRequest(self, method, **data):
         """
 
@@ -72,6 +81,8 @@ class API_Constructor():
             # Делаем запрос
             response = self.session.post(self.api_source + method, params=data, proxies={'https': self.proxy}, headers=self.headers)
             response_text = re.sub('true', 'True', response.text)
+            response_text = re.sub('false', 'False', response_text)
+            response_text = re.sub('null', 'None', response_text)
 
             # Проверяем на ошибки
             if eval(response_text).get('error'):
@@ -102,6 +113,7 @@ class API_Constructor():
     def errorHandler(self, error):
         sender = self.getRequest(method='users.get')[0]['id']
         if error['error_code'] == 6:
+            sleep(1)
             print("Запросы отправляются слишком быстро")
         elif error['error_code'] == 900:
             for item in error['request_params']:
@@ -191,8 +203,17 @@ class API_Object():
             api_source=self.api_source,
             warn_level=self.warn_level or 1
         )
-        return API.getRequest(method=self.method, **kwargs)
+        RequestPool.Pool.startPool()
+        request = Request(method=self.method, cls=API, id=UUID(), **kwargs)
 
+        RequestPool.Pool.addRequest(request)
+
+        while True:
+            for response in RequestPool.Pool.getProcessed():
+                if response.getId() == request.getId():
+
+                    RequestPool.Pool.processed.remove(response)
+                    return response.body
 class API():
     def __init__(self, warn_level=None, api_source=None, access_token=None, proxy=None, rucaptcha_key=None, version=None):
         self.access_token = access_token or None
