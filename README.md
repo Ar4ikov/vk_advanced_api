@@ -47,7 +47,7 @@ pip install vk_advanced_api
 Если хотите установить определенную версию, используйте `==version`, где
 version - желаемая версия
 ```shell
-pip install vk_advanced_api==1.2.4
+pip install vk_advanced_api==1.3.1
 ```
 Чтобы обновить модуль, напишите параметр `--upgrade`, установится последнаяя стабильная версия
 ```shell
