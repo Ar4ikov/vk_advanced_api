@@ -3,6 +3,7 @@ from threading import Thread
 import time
 
 class Pool():
+
     pool = []
     processed = []
     started = False

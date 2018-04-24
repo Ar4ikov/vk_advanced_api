@@ -394,7 +394,7 @@ class VKAPI():
         :return: - Вернет список с JSON-схемами, хранящие информацию о загруженных аудиозаписей
         """
         getUploadServer = self.api.docs.getUploadServer(type="audio_message")
-        upload_url = getUploadServer["upload_url"]
+        upload_url = getUploadServer["upload_url"].replace("\\", "")
         result = []
         for file in files:
             try:
@@ -417,7 +417,7 @@ class VKAPI():
         :return: - Вернет список с JSON-схемами, хранящие информацию о загруженных видеороликах
         """
         getUploadServer = self.api.video.save(name='SuperCraft', description='SuperCraft', is_private=False)
-        upload_url = getUploadServer["upload_url"]
+        upload_url = getUploadServer["upload_url"].replace("\\", "")
         result = []
         for file in files:
             try:
@@ -440,7 +440,7 @@ class VKAPI():
         :return: - Вернет список с JSON-схемами, хранящие информацию о загруженных фотографиях
         """
         getUploadServer = self.api.photos.getMessagesUploadServer()
-        upload_url = getUploadServer["upload_url"]
+        upload_url = getUploadServer["upload_url"].replace("\\", "")
         result = []
         i = 0
         for file in files:
