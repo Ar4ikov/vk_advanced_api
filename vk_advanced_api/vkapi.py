@@ -219,6 +219,7 @@ class VKAPI():
         """
 
         # Часть 1 ->
+        global response
         self.events = []
         self.details = self.getPollingDetails()
         while True:
@@ -236,7 +237,7 @@ class VKAPI():
                 self.events = response['updates']
                 self.details['ts'] = response['ts']
             except Exception as error:
-                self.poll.emit('error', {'body': str(error)})
+                self.poll.emit('error', {'body': str(error) + " -> " + response})
             else:
                 # Часть два ->
                 messages = []
@@ -442,16 +443,14 @@ class VKAPI():
         getUploadServer = self.api.photos.getMessagesUploadServer()
         upload_url = getUploadServer["upload_url"].replace("\\", "")
         result = []
-        i = 0
         for file in files:
             try:
                 up_res = requests.post(upload_url, files={'file': open(file, "rb")})
                 up_res = eval(up_res.text)
                 sleep(0.34)
                 getVKFile = self.api.photos.saveMessagesPhoto(photo=up_res["photo"], server=up_res["server"], hash=up_res["hash"])
-                getVKFile = "photo" + str(getVKFile[i]['owner_id']) + "_" + str(getVKFile[i]['id'])
+                getVKFile = "photo" + str(getVKFile[0]['owner_id']) + "_" + str(getVKFile[0]['id'])
                 result.append(getVKFile)
-                i +=1
             except Exception as error:
                 self.poll.emit('error', {'body': str(error)})
         return result
