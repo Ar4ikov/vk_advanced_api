@@ -1,5 +1,6 @@
 from uuid import uuid4 as UUID
 
+
 class Request():
     def __init__(self, method, cls, id, **params):
         """

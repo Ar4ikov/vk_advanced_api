@@ -2,8 +2,8 @@ from vk_advanced_api.Response import Response
 from threading import Thread
 import time
 
-class Pool():
 
+class Pool():
     pool = []
     processed = []
     started = False
@@ -26,6 +26,7 @@ class Pool():
 
                 if len(Pool.pool) > 0:
                     Pool.pool.remove(request)
+
     @staticmethod
     def startPool():
         if not Pool.started:

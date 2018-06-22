@@ -9,8 +9,10 @@ from parsel import Selector
 import requests
 import lxml.html
 
+
 class Auth():
-    def __init__(self, access_token=None, login=None, password=None, proxy=None, app_id=None, scopes_list=None, version=None):
+    def __init__(self, access_token=None, login=None, password=None, proxy=None, app_id=None, scopes_list=None,
+                 version=None):
         """
 
         Класс аунтификации юзера через кастомное Standalone-приложение VK
@@ -119,13 +121,13 @@ class Auth():
             'stats',
             'email',
             'market'
-                                    ]
+        ]
         scopes = ""
         app_id = self.app_id
 
         i = 0
         for scope in scopes_list:
-            if i == len(scopes_list)-1:
+            if i == len(scopes_list) - 1:
                 scopes = scopes + scope
             else:
                 scopes = scopes + scope + "%2C"
@@ -134,7 +136,8 @@ class Auth():
         # Далее - костыльный и некрасивый код :(
         # Он не достоин вашего внимания!
 
-        request = 'https://oauth.vk.com/authorize?client_id={app_id}&scope={scopes}&redirect_uri=https://oauth.vk.com/blank.html&display=page&v=5.69&response_type=token'.format(app_id=app_id, scopes=scopes)
+        request = 'https://oauth.vk.com/authorize?client_id={app_id}&scope={scopes}&redirect_uri=https://oauth.vk.com/blank.html&display=page&v=5.69&response_type=token'.format(
+            app_id=app_id, scopes=scopes)
 
         response = self.session.post(request, proxies={'https': self.proxy})
 
@@ -165,8 +168,9 @@ class Auth():
             pass
 
         link = self.pasre(response=response, tag='form')[0]['grant-access']
-        token =  self.session.post(link, proxies={'https': self.proxy}).url[45:130]
+        token = self.session.post(link, proxies={'https': self.proxy}).url[45:130]
         return token
+
 
 class VKAuthError(Exception):
     pass

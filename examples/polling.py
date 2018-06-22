@@ -61,10 +61,12 @@
 import vk_advanced_api
 
 # Создаем экземпляр класса VKAPI
+from vk_advanced_api.vkapi import PollingTypes
+
 api = vk_advanced_api.VKAPI(
     captcha_key='your-captcha-key',
     access_token='Your-Access-Token',
-    version=5.71,
+    version=5.74,
     warn_level=1,
     command_prefix='/'
 )
@@ -77,7 +79,8 @@ utils = api.utils
 # `enable_notifications` - включает Notifications Events
 # По умолчанию стоит `False`, является необязательным параметром и добавлено временно
 #
-api.polling(enable_notifications=False)
+api.polling(polling_type=PollingTypes.CALLBACK, enable_notifications=False)
+
 
 # Прослушиваем эвент new_messages
 @api.poll.on('new_message')
@@ -97,7 +100,9 @@ def bot(event, command):
 
         # Определяем, что за команда была указана
         if command == '/about':
-            api.sendMessage(user_id=event['peer_id'], message='Я - новый бот VK!\nЯ использую новую open-source библиотеку vk_advanced_api (https://github.com/Ar4ikov/vk_advanced_api)')
+            api.sendMessage(user_id=event['peer_id'],
+                            message='Я - новый бот VK!\nЯ использую новую open-source библиотеку vk_advanced_api (https://github.com/Ar4ikov/vk_advanced_api)')
+
 
 @api.poll.on('new_action')
 def onAction(event):
@@ -118,7 +123,8 @@ def onAction(event):
         print('Создан чат с названием {}'.format(event['acts']['act_text']))
 
     elif event['acts']['act'] == 'chat_title_update':
-        print('{user} сменил название чата на {title}'.format(user=event['acts']['act_from'], title=event['acts']['act_text']))
+        print('{user} сменил название чата на {title}'.format(user=event['acts']['act_from'],
+                                                              title=event['acts']['act_text']))
 
     elif event['acts']['act'] == 'chat_photo_update':
         print('{} сменил фотографию чата'.format(event['acts']['act_from']))
@@ -132,12 +138,17 @@ def onAction(event):
     elif event['acts']['act'] == 'chat_invite_user_by_link':
         print('{user} присоединился в чат по ссылке'.format(user=event['acts']['act_from']))
 
+
 @api.poll.on('new_notification')
 def handleNotification(event):
     if event.get('user_id'):
-        print('Пользователь {user} совершил `{type}` в {time} по UNIX'.format(user=event['user_id'], type=event['type'], time=event['date']))
+        print('Пользователь {user} совершил `{type}` в {time} по UNIX'.format(user=event['user_id'], type=event['type'],
+                                                                              time=event['date']))
     else:
-        print('В {time} по UNIX пользователи {users} совершили `{type}`'.format(time=event['date'], users=event['user_ids'], type=event['type']))
+        print('В {time} по UNIX пользователи {users} совершили `{type}`'.format(time=event['date'],
+                                                                                users=event['user_ids'],
+                                                                                type=event['type']))
+
 
 @api.poll.on('error')
 def errorHandler(event):

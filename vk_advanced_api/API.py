@@ -9,9 +9,16 @@ import requests
 from captcha_solver import CaptchaSolver
 import re
 import sys
+from time import sleep
+
+from vk_advanced_api.Request import Request
+from vk_advanced_api import Pool as RequestPool
+from uuid import uuid4 as UUID
+
 
 class API_Constructor():
-    def __init__(self, warn_level=None, api_source=None, access_token=None, session=requests.session(), proxy=None, rucaptcha_key=None, version=None):
+    def __init__(self, warn_level=None, api_source=None, access_token=None, session=requests.session(), proxy=None,
+                 rucaptcha_key=None, version=None):
         """
 
         Название класса довольно странное. Ведь оно
@@ -45,6 +52,10 @@ class API_Constructor():
         self.api_source = api_source or 'https://api.vk.com/method/'
         self.warn_level = warn_level or 1
 
+    @staticmethod
+    def getRequestingBody():
+        return API_Constructor.getRequest
+
     def getRequest(self, method, **data):
         """
 
@@ -70,8 +81,11 @@ class API_Constructor():
             data['v'] = self.version
 
             # Делаем запрос
-            response = self.session.post(self.api_source + method, params=data, proxies={'https': self.proxy}, headers=self.headers)
+            response = self.session.post(self.api_source + method, params=data, proxies={'https': self.proxy},
+                                         headers=self.headers)
             response_text = re.sub('true', 'True', response.text)
+            response_text = re.sub('false', 'False', response_text)
+            response_text = re.sub('null', 'None', response_text)
 
             # Проверяем на ошибки
             if eval(response_text).get('error'):
@@ -102,28 +116,33 @@ class API_Constructor():
     def errorHandler(self, error):
         sender = self.getRequest(method='users.get')[0]['id']
         if error['error_code'] == 6:
+            sleep(1)
             print("Запросы отправляются слишком быстро")
         elif error['error_code'] == 900:
             for item in error['request_params']:
                 if item['key'] == 'user_id':
                     user_id = item['value']
-                    print('Пользователь id{user_id} добавил аккаунт id{sender} в черный список'.format(user_id=user_id, sender=sender))
+                    print('Пользователь id{user_id} добавил аккаунт id{sender} в черный список'.format(user_id=user_id,
+                                                                                                       sender=sender))
                     break
         elif error['error_code'] == 901:
             for item in error['request_params']:
                 if item['key'] == 'user_id':
                     user_id = item['value']
-                    print('Пользователь id{user_id} запретил отправку сообщений от имени сообщества'.format(user_id=user_id, sender=sender))
+                    print('Пользователь id{user_id} запретил отправку сообщений от имени сообщества'.format(
+                        user_id=user_id, sender=sender))
                     break
         elif error['error_code'] == 902:
             for item in error['request_params']:
                 if item['key'] == 'user_id':
                     user_id = item['value']
-                    print('Пользователь id{user_id} запретил отправлять ему сообщения в настройках приватности'.format(user_id=user_id))
+                    print('Пользователь id{user_id} запретил отправлять ему сообщения в настройках приватности'.format(
+                        user_id=user_id))
                     break
         elif error['error_code'] == 14:
             print('Аккаунт id{} словил капчу! -> {}'.format(sender, error['captcha_img']))
-            return {'captcha_key': self.getRuCaptchaSolver(self.savePhotoFrom(error['captcha_img'], 'captcha.png')), 'captcha_sid': error['captcha_sid']}
+            return {'captcha_key': self.getRuCaptchaSolver(self.savePhotoFrom(error['captcha_img'], 'captcha.png')),
+                    'captcha_sid': error['captcha_sid']}
 
     def getRuCaptchaSolver(self, filename):
         """
@@ -161,8 +180,10 @@ class API_Constructor():
         except:
             return False, str(sys.exc_info())
 
+
 class API_Object():
-    def __init__(self, warn_level=None, method=None, api_source=None, access_token=None, proxy=None, rucaptcha_key=None, version=None):
+    def __init__(self, warn_level=None, method=None, api_source=None, access_token=None, proxy=None, rucaptcha_key=None,
+                 version=None):
         self.method = method or None
         self.access_token = access_token or None
         self.version = version or None
@@ -191,10 +212,21 @@ class API_Object():
             api_source=self.api_source,
             warn_level=self.warn_level or 1
         )
-        return API.getRequest(method=self.method, **kwargs)
+        RequestPool.Pool.startPool()
+        request = Request(method=self.method, cls=API, id=UUID(), **kwargs)
+
+        RequestPool.Pool.addRequest(request)
+
+        while True:
+            for response in RequestPool.Pool.getProcessed():
+                if response.getId() == request.getId():
+                    RequestPool.Pool.processed.remove(response)
+                    return response.body
+
 
 class API():
-    def __init__(self, warn_level=None, api_source=None, access_token=None, proxy=None, rucaptcha_key=None, version=None):
+    def __init__(self, warn_level=None, api_source=None, access_token=None, proxy=None, rucaptcha_key=None,
+                 version=None):
         self.access_token = access_token or None
         self.version = version or None
         self.proxy = proxy or None
@@ -210,11 +242,13 @@ class API():
             proxy=self.proxy,
             rucaptcha_key=self.rucaptcha_key,
             api_source=self.api_source,
-            warn_level = self.warn_level
+            warn_level=self.warn_level
         )
+
 
 class VKAPIError(Exception):
     pass
+
 
 class VKAPITechnicalError(Exception):
     pass

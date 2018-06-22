@@ -5,6 +5,7 @@
 # | Создан 07.03.2018 - 9:29
 # ---------------------------
 import os
+from enum import Enum
 
 with open(os.path.join(os.path.dirname(__file__), 'version')) as f:
     __version__ = f.readline().strip()
@@ -19,10 +20,22 @@ import requests
 
 from vk_advanced_api import API
 from vk_advanced_api.Auth import Auth
+from vk_advanced_api.Callback import Callback
 
 
-class VKAPI():
-    def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None, warn_level=None, command_prefix='/'):
+class PollingTypes(Enum):
+    POLLING = 1
+    CALLBACK = 2
+
+
+class TokenType(Enum):
+    USER = "user"
+    GROUP = "group"
+
+
+class VKAPI:
+    def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None,
+                 warn_level=None, command_prefix='/'):
         """
 
         VK Advanced API - Продвинутое OpenSource API на Python для VK
@@ -44,6 +57,7 @@ class VKAPI():
         self.warn_level = warn_level or 1
 
         self.poll = pymitter.EventEmitter()
+        self.callback = Callback(self.poll)
 
         if not access_token:
             self.login = login or None
@@ -60,7 +74,7 @@ class VKAPI():
             version=self.version,
             rucaptcha_key=captcha_key or None,
             proxy=None
-            )
+        )
 
         # Запрос на проверку типа токена:
         # - User Access Token
@@ -70,10 +84,10 @@ class VKAPI():
 
         self.bot_fields = self.api.users.get()
         if len(self.bot_fields) > 0:
-            self.token_type = 'user'
+            self.token_type = TokenType.USER
             self.bot_id = self.bot_fields[0]['id']
         else:
-            self.token_type = 'group'
+            self.token_type = TokenType.GROUP
         sleep(0.34)
 
         self.start_time = str(int(time.time()))[0:10]
@@ -116,7 +130,7 @@ class VKAPI():
         :return: - Вернет JSON-схему с содежимым server, key, ts
         """
         sleep(0.34)
-        if self.token_type == 'user':
+        if self.token_type == TokenType.USER:
             polling_details = self.api.messages.getLongPollServer()
         else:
             polling_details = self.api.groups.getLongPollServer()
@@ -226,14 +240,14 @@ class VKAPI():
             try:
                 self.details['server'] = re.sub(r'\\/', '/', self.details['server'])
                 response = eval(requests.get('https://{}'.format(self.details['server']),
-                                         params={
-                                             'act': 'a_check',
-                                             'key': self.details['key'],
-                                             'ts': self.details['ts'],
-                                             'wait': 25,
-                                             'version': 2,
-                                             'mode': 2
-                                         }).text)
+                                             params={
+                                                 'act': 'a_check',
+                                                 'key': self.details['key'],
+                                                 'ts': self.details['ts'],
+                                                 'wait': 25,
+                                                 'version': 2,
+                                                 'mode': 2
+                                             }).text)
                 self.events = response['updates']
                 self.details['ts'] = response['ts']
             except Exception as error:
@@ -267,10 +281,10 @@ class VKAPI():
                     attachments = []
                     attach_key = 'attach1'
                     attach_type = 'attach1_type'
-                    for i in range(1,11):
+                    for i in range(1, 11):
                         if event[-1].get(attach_key):
                             attachments.append(event[-1].get(attach_type) + event[-1].get(attach_key))
-                            attach_key = attach_key[0:6] + str(i+1)
+                            attach_key = attach_key[0:6] + str(i + 1)
                             attach_type = attach_key + "_type"
                         else:
                             break
@@ -295,12 +309,15 @@ class VKAPI():
 
                     if isActed == False:
                         new_events.append(
-                                dict(event='new_message', type=msg_type, date=event[4], is_out=isOut, message_id=event[1], args=args, is_command=isCommand, peer_id=event[3],
-                                     from_id=from_id, body=event, is_acted=isActed, attachments=attachments))
+                            dict(event='new_message', type=msg_type, date=event[4], is_out=isOut, message_id=event[1],
+                                 args=args, is_command=isCommand, peer_id=event[3],
+                                 from_id=from_id, body=event, is_acted=isActed, attachments=attachments))
                     else:
-                        new_events.append(dict(event='new_action', message_id=event[1], date=event[4], attachments=attachments, peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
-                                                   acts=dict(act=act, act_mid=act_mid, act_text=act_text,
-                                                             act_from=act_from)))
+                        new_events.append(
+                            dict(event='new_action', message_id=event[1], date=event[4], attachments=attachments,
+                                 peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
+                                 acts=dict(act=act, act_mid=act_mid, act_text=act_text,
+                                           act_from=act_from)))
 
                 for new in new_events:
                     if new['event'] == 'new_action':
@@ -313,7 +330,7 @@ class VKAPI():
 
                 # self.details = self.getPollingDetails()
 
-    def polling(self, enable_notifications=False):
+    def polling(self, polling_type=PollingTypes.POLLING, enable_notifications=False, host="127.0.0.1"):
         """
 
         Технология Polling (LongPolling) -  универсальное средство получения ответа тогда, когда он поступит
@@ -327,9 +344,15 @@ class VKAPI():
         :return: - None
         """
 
-        tasks = [
-            {'name': 'polling', 'object': self.PollingRequesting},
-            {'name': 'details', 'object': self.updatingDetails}]
+        tasks = []
+
+        if polling_type == PollingTypes.POLLING:
+            tasks.append({'name': 'polling', 'object': self.PollingRequesting})
+        if self.token_type == TokenType.GROUP and polling_type == PollingTypes.CALLBACK:
+            self.callback.set_start_params(host)
+            tasks.append({'name': 'callback', 'object': self.callback.run})
+
+        tasks.append({'name': 'details', 'object': self.updatingDetails})
 
         if enable_notifications:
             tasks.append({'name': 'notifications', 'object': self.NotificationPolling})
@@ -343,14 +366,14 @@ class VKAPI():
 
         :return:
         """
-        if self.token_type == 'group':
+        if self.token_type == TokenType.GROUP:
             print('Для токена сообществ не доступен тип эвентов `new_notification`.')
             return False
 
         self.notify_events = []
         start_time = self.api.notifications.get(count=0)['last_viewed']
 
-        while self.token_type == 'user':
+        while self.token_type == TokenType.USER:
             sleep(0.34)
             notify_body = self.api.notifications.get(count=100, start_time=start_time)
             if notify_body['count'] > 0:
@@ -426,7 +449,7 @@ class VKAPI():
                 up_res = eval(up_res.text)
                 sleep(0.34)
                 getVKFile = 'video' + str(self.bot_id) + "_" + str(up_res['video_id'])
-                #getVKFile = self.api.photos.saveMessagesPhoto(photo=up_res["photo"], server=up_res["server"], hash=up_res["hash"])
+                # getVKFile = self.api.photos.saveMessagesPhoto(photo=up_res["photo"], server=up_res["server"], hash=up_res["hash"])
                 result.append(getVKFile)
             except Exception as error:
                 self.poll.emit('error', {'body': str(error)})
@@ -448,7 +471,8 @@ class VKAPI():
                 up_res = requests.post(upload_url, files={'file': open(file, "rb")})
                 up_res = eval(up_res.text)
                 sleep(0.34)
-                getVKFile = self.api.photos.saveMessagesPhoto(photo=up_res["photo"], server=up_res["server"], hash=up_res["hash"])
+                getVKFile = self.api.photos.saveMessagesPhoto(photo=up_res["photo"], server=up_res["server"],
+                                                              hash=up_res["hash"])
                 getVKFile = "photo" + str(getVKFile[0]['owner_id']) + "_" + str(getVKFile[0]['id'])
                 result.append(getVKFile)
             except Exception as error:
@@ -468,7 +492,8 @@ class VKAPI():
         :return:
         """
 
-        url = self.api.photos.getOwnerCoverPhotoUploadServer(group_id=group_id, crop_x=x1, crop_y=y1, crop_x2=x2, crop_y2=y2)
+        url = self.api.photos.getOwnerCoverPhotoUploadServer(group_id=group_id, crop_x=x1, crop_y=y1, crop_x2=x2,
+                                                             crop_y2=y2)
         url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
 
         response = eval(requests.post(url['upload_url'], files={'photo': open(file, 'rb')}).text)
@@ -503,7 +528,7 @@ class VKAPI():
 
         data = {}
         for i in range(len(files)):
-            data['file{}'.format(i+1)] = open(files[i], 'rb')
+            data['file{}'.format(i + 1)] = open(files[i], 'rb')
 
         if len(files) > 0:
             url = self.api.photos.getUploadServer(group_id=group_id, album_id=album_id)
@@ -562,7 +587,6 @@ class VKAPI():
 
         return 'photo{}_{}'.format(photo[0]['owner_id'], photo[0]['id'])
 
-
     def setAvatar(self, file, x, y, width, owner_id=None):
         """
 
@@ -603,14 +627,14 @@ class VKAPI():
         :return: audio<owner_id>_<id>
         """
 
-        if self.token_type == 'group':
+        if self.token_type == TokenType.GROUP:
             return 'Данный метод не доступен для токена сообществ.'
         url = self.api.audio.getUploadServer()
         url['upload_url'] = re.sub(r'\\/', '/', url['upload_url'])
 
         response = eval(requests.post(url['upload_url'], files={'file': open(file, 'rb')}).text)
 
-        audio =  self.api.audio.save(
+        audio = self.api.audio.save(
             server=response['server'],
             hash=response['hash'],
             audio=response['audio'],
