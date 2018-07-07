@@ -81,7 +81,7 @@ class API_Constructor():
             data['v'] = self.version
 
             # Делаем запрос
-            response = self.session.post(self.api_source + method, params=data, proxies={'https': self.proxy},
+            response = self.session.post(self.api_source + method, data=data, proxies={'https': self.proxy},
                                          headers=self.headers)
             response_text = re.sub('true', 'True', response.text)
             response_text = re.sub('false', 'False', response_text)
@@ -114,7 +114,6 @@ class API_Constructor():
                 return eval(response_text)['response']
 
     def errorHandler(self, error):
-        sender = self.getRequest(method='users.get')[0]['id']
         if error['error_code'] == 6:
             sleep(1)
             print("Запросы отправляются слишком быстро")
@@ -122,15 +121,14 @@ class API_Constructor():
             for item in error['request_params']:
                 if item['key'] == 'user_id':
                     user_id = item['value']
-                    print('Пользователь id{user_id} добавил аккаунт id{sender} в черный список'.format(user_id=user_id,
-                                                                                                       sender=sender))
+                    print('Пользователь id{user_id} добавил вас в черный список'.format(user_id=user_id))
                     break
         elif error['error_code'] == 901:
             for item in error['request_params']:
                 if item['key'] == 'user_id':
                     user_id = item['value']
                     print('Пользователь id{user_id} запретил отправку сообщений от имени сообщества'.format(
-                        user_id=user_id, sender=sender))
+                        user_id=user_id))
                     break
         elif error['error_code'] == 902:
             for item in error['request_params']:
@@ -140,7 +138,7 @@ class API_Constructor():
                         user_id=user_id))
                     break
         elif error['error_code'] == 14:
-            print('Аккаунт id{} словил капчу! -> {}'.format(sender, error['captcha_img']))
+            print('Аккаунт словил капчу! -> {}'.format(error['captcha_img']))
             return {'captcha_key': self.getRuCaptchaSolver(self.savePhotoFrom(error['captcha_img'], 'captcha.png')),
                     'captcha_sid': error['captcha_sid']}
 

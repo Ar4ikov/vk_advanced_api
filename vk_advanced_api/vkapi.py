@@ -21,6 +21,7 @@ import requests
 from vk_advanced_api import API
 from vk_advanced_api.Auth import Auth
 from vk_advanced_api.Callback import Callback
+from vk_advanced_api.LongPoll import BotsLongPoll, UserLongPoll
 
 
 class PollingTypes(Enum):
@@ -34,7 +35,8 @@ class TokenType(Enum):
 
 
 class VKAPI:
-    def __init__(self, access_token=None, login=None, password=None, app_id=None, version=None, captcha_key=None,
+    def __init__(self, access_token=None, group_id=None, login=None, password=None, app_id=None, version=None,
+                 captcha_key=None,
                  warn_level=None, command_prefix='/'):
         """
 
@@ -51,13 +53,10 @@ class VKAPI:
             > 2 - Выводит посредством вызова исключений (raise)
         :param command_prefix: - Префикс для объявления команд (на них будет реагиорвать API)
         """
-        self.version = version or 5.73
+        self.version = version or "5.80"
         self.command_prefix = command_prefix or '/'
 
         self.warn_level = warn_level or 1
-
-        self.poll = pymitter.EventEmitter()
-        self.callback = Callback(self.poll)
 
         if not access_token:
             self.login = login or None
@@ -83,12 +82,20 @@ class VKAPI:
         self.token_type = None
 
         self.bot_fields = self.api.users.get()
+
         if len(self.bot_fields) > 0:
             self.token_type = TokenType.USER
             self.bot_id = self.bot_fields[0]['id']
         else:
             self.token_type = TokenType.GROUP
+            self.bot_id = group_id
         sleep(0.34)
+
+        self.poll = pymitter.EventEmitter()
+        self.callback = Callback(self.poll)
+        self.bots_longpoll = BotsLongPoll(event_poll=self.poll, utils=self.utils, group_id=self.bot_id)
+        self.user_longpoll = UserLongPoll(event_poll=self.poll, utils=self.utils,
+                                          command_prefix=self.command_prefix, flags=self.isOut)
 
         self.start_time = str(int(time.time()))[0:10]
 
@@ -201,134 +208,24 @@ class VKAPI:
         else:
             return False
 
-    def updatingDetails(self):
+    def error_exec(self, func):
+        """
+        Декоратор, который полностью дебажит ваш код, чтобы все ошибки шли в другой эвент!
+
+        :param command:
+        :param func:
+        :return:
         """
 
-        Обновляет каждые 10 минут данные для подключения к Polling-серверу
-
-        :return: - Обновляет self.details
-        """
-        while True:
-            sleep(600)
+        def returns(*args, **kwargs):
             try:
-                self.details = self.getPollingDetails()
+                func(*args, **kwargs)
             except Exception as error:
                 self.poll.emit('error', {'body': str(error)})
 
-    def PollingRequesting(self):
-        """
+            return True
 
-        Первая часть ->
-        Отправка запросов на Polling-сервера VK
-        Чтобы получить их, используется метод messages.getLongPollingServer
-
-        Вторая часть ->
-        Обработка ответов с Polling-сервера
-        Различаются 3 типа эвентов (два с утвердительным ответом и один с ошибочным)
-        :event new_message: - Новое сообщения в беседе, личных сообщениях (от групп или от человека)
-
-        :event new_action: - Эвент, который возможен только в чатах/беседах
-
-        :return: - Добавляет новый эвент в self.events
-        """
-
-        # Часть 1 ->
-        global response
-        self.events = []
-        self.details = self.getPollingDetails()
-        while True:
-            try:
-                self.details['server'] = re.sub(r'\\/', '/', self.details['server'])
-                response = eval(requests.get('https://{}'.format(self.details['server']),
-                                             params={
-                                                 'act': 'a_check',
-                                                 'key': self.details['key'],
-                                                 'ts': self.details['ts'],
-                                                 'wait': 25,
-                                                 'version': 2,
-                                                 'mode': 2
-                                             }).text)
-                self.events = response['updates']
-                self.details['ts'] = response['ts']
-            except Exception as error:
-                self.poll.emit('error', {'body': str(error) + " -> " + response})
-            else:
-                # Часть два ->
-                messages = []
-                for event in self.events:
-                    if event[0] == 4:
-                        messages.append(event)
-
-                new_events = []
-                for event in messages:
-                    from_id = None
-                    if event[-1].get('from'):
-                        msg_type = 'public'
-                        from_id = event[-1].get('from')
-                    else:
-                        msg_type = 'private'
-
-                    if event[-1].get('source_act'):
-                        isActed = True
-                    else:
-                        isActed = False
-
-                    act = event[-1].get('source_act')
-                    act_mid = event[-1].get('source_mid')
-                    act_text = event[-1].get('source_text')
-                    act_from = event[-1].get('from')
-
-                    attachments = []
-                    attach_key = 'attach1'
-                    attach_type = 'attach1_type'
-                    for i in range(1, 11):
-                        if event[-1].get(attach_key):
-                            attachments.append(event[-1].get(attach_type) + event[-1].get(attach_key))
-                            attach_key = attach_key[0:6] + str(i + 1)
-                            attach_type = attach_key + "_type"
-                        else:
-                            break
-
-                    args = re.sub(r'\\/', '/', event[5])
-                    args = args.split(' ')
-
-                    isCommand = None
-                    isOut = None
-                    if len(''.join(args)) > 0:
-                        if len(args) > 0:
-                            if len(args[0]) > 0:
-                                if args[0][0] == self.command_prefix:
-                                    isCommand = True
-                                else:
-                                    isCommand = False
-
-                    if self.isOut(event[2]):
-                        isOut = True
-                    else:
-                        isOut = False
-
-                    if isActed == False:
-                        new_events.append(
-                            dict(event='new_message', type=msg_type, date=event[4], is_out=isOut, message_id=event[1],
-                                 args=args, is_command=isCommand, peer_id=event[3],
-                                 from_id=from_id, body=event, is_acted=isActed, attachments=attachments))
-                    else:
-                        new_events.append(
-                            dict(event='new_action', message_id=event[1], date=event[4], attachments=attachments,
-                                 peer_id=event[3], type=msg_type, is_out=isOut, from_id=from_id, is_acted=isActed,
-                                 acts=dict(act=act, act_mid=act_mid, act_text=act_text,
-                                           act_from=act_from)))
-
-                for new in new_events:
-                    if new['event'] == 'new_action':
-                        self.poll.emit('new_action', new)
-                    elif new['event'] == 'new_message':
-                        if new['is_command'] == True:
-                            self.poll.emit('new_message', new, command=new['args'][0])
-                        else:
-                            self.poll.emit('new_message', new, command=None)
-
-                # self.details = self.getPollingDetails()
+        return returns
 
     def polling(self, polling_type=PollingTypes.POLLING, enable_notifications=False, host="127.0.0.1"):
         """
@@ -346,28 +243,28 @@ class VKAPI:
 
         tasks = []
 
-        if polling_type == PollingTypes.POLLING:
-            tasks.append({'name': 'polling', 'object': self.PollingRequesting})
+        if self.token_type == TokenType.USER and polling_type == PollingTypes.POLLING:
+            tasks.append({'name': 'polling', 'object': self.user_longpoll.run})
         if self.token_type == TokenType.GROUP and polling_type == PollingTypes.CALLBACK:
             self.callback.set_start_params(host)
             tasks.append({'name': 'callback', 'object': self.callback.run})
-
-        tasks.append({'name': 'details', 'object': self.updatingDetails})
+        if self.token_type == TokenType.GROUP and polling_type == PollingTypes.POLLING:
+            tasks.append({"name": 'polling', 'object': self.bots_longpoll.run})
 
         if enable_notifications:
-            tasks.append({'name': 'notifications', 'object': self.NotificationPolling})
+            tasks.append({'name': 'notifications', 'object': self.notification_polling})
 
         for task in tasks:
             thread = Thread(name=task['name'], target=task['object'], args=())
             thread.start()
 
-    def NotificationPolling(self):
+    def notification_polling(self):
         """
 
         :return:
         """
         if self.token_type == TokenType.GROUP:
-            print('Для токена сообществ не доступен тип эвентов `new_notification`.')
+            print('Для токена сообществ не доступен тип эвентов `notification_new`.')
             return False
 
         self.notify_events = []
@@ -407,7 +304,7 @@ class VKAPI:
                                                parent_id=parent_id))
 
                 for event in new_events:
-                    self.poll.emit('new_notification', event)
+                    self.poll.emit('notification_new', event)
 
     def sendAudioMessage(self, files):
         """

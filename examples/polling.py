@@ -66,7 +66,7 @@ from vk_advanced_api.vkapi import PollingTypes
 api = vk_advanced_api.VKAPI(
     captcha_key='your-captcha-key',
     access_token='Your-Access-Token',
-    version=5.74,
+    version="5.80",
     warn_level=1,
     command_prefix='/'
 )
@@ -79,7 +79,7 @@ utils = api.utils
 # `enable_notifications` - включает Notifications Events
 # По умолчанию стоит `False`, является необязательным параметром и добавлено временно
 #
-api.polling(polling_type=PollingTypes.CALLBACK, enable_notifications=False)
+api.polling(polling_type=PollingTypes.POLLING, enable_notifications=False, host="127.0.0.1")
 
 
 # Прослушиваем эвент new_messages
@@ -101,7 +101,8 @@ def bot(event, command):
         # Определяем, что за команда была указана
         if command == '/about':
             api.sendMessage(user_id=event['peer_id'],
-                            message='Я - новый бот VK!\nЯ использую новую open-source библиотеку vk_advanced_api (https://github.com/Ar4ikov/vk_advanced_api)')
+                            message="""Я - новый бот VK!\nЯ использую новую open-source библиотеку vk_advanced_api (
+                            https://github.com/Ar4ikov/vk_advanced_api)""")
 
 
 @api.poll.on('new_action')

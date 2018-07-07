@@ -12,7 +12,7 @@ with open(_version_file_path) as f:
 setup(
     name='vk_advanced_api',
     version=__version__,
-    install_requires=['requests', 'captcha_solver', 'lxml', 'parsel', 'pymitter'],
+    install_requires=['requests', 'captcha_solver', 'lxml', 'parsel', 'pymitter', 'flask'],
     packages=['vk_advanced_api'],
     package_data={'vk_advanced_api': ['version']},
     url='https://github.com/Ar4ikov/vk_advanced_api',
